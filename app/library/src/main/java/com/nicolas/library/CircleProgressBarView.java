@@ -1,10 +1,12 @@
 package com.nicolas.library;
 
+import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.TypedValue;
@@ -31,6 +33,10 @@ public class CircleProgressBarView extends View {
     private int progress;               //进度条进度
     private int max;                    //最大进度
     private float progressSweepAngle;   //通过progress折算的圆弧扫描角度
+    private int rectSize;               //画圆弧的正方形的尺寸
+    private float pivotX;               //圆弧的圆点X值
+    private float pivotY;               //圆弧的圆点Y值
+    private float radius;               //圆弧的半径
 
     public CircleProgressBarView(Context context) {
         super(context, null);
@@ -92,15 +98,19 @@ public class CircleProgressBarView extends View {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int width = measureSize(defaultSize, widthMeasureSpec);
         int height = measureSize(defaultSize, heightMeasureSpec);
-        int min = Math.min(width, height);// 获取View最短边的长度
-        setMeasuredDimension(min, min);// 强制改View为以最短边为长度的正方形
+        rectSize = Math.min(width, height);// 获取View最短边的长度
+        setMeasuredDimension(rectSize, rectSize);// 强制改View为以最短边为长度的正方形
 
         //这里简单限制了圆弧的最大宽度
-        if (min >= progressWidth * 2) {
-            mRectF.set(progressWidth / 2, progressWidth / 2, min - progressWidth / 2, min - progressWidth / 2);
+        if (rectSize >= progressWidth * 2) {
+            mRectF.set(progressWidth * 2, progressWidth * 2, rectSize - progressWidth * 2, rectSize - progressWidth * 2);
+            radius = ((float) rectSize - progressWidth * 4) / 2;
         } else {
-            mRectF.set(0, 0, min, min);
+            mRectF.set(progressWidth, progressWidth, rectSize - progressWidth, rectSize - progressWidth);
+            radius = ((float) rectSize - progressWidth*2) / 2;
         }
+        pivotX = ((float) rectSize) / 2;
+        pivotY = ((float) rectSize) / 2;
     }
 
     @Override
@@ -109,8 +119,18 @@ public class CircleProgressBarView extends View {
         //画view
         //画圆弧框
         canvas.drawArc(mRectF, startAngle, sweepAngle, false, backgroundPaint);
-        //画圆弧框
+        //画圆弧
         canvas.drawArc(mRectF, startAngle, progressSweepAngle, false, progressPaint);
+        //画箭头
+        canvas.rotate(progressSweepAngle + startAngle, pivotX, pivotY);     //将画布旋转，让圆弧的末端对准X轴正方向
+        //计算箭头Path
+        Path arrow = new Path();
+        arrow.moveTo(pivotX + radius, pivotY);
+        arrow.lineTo(pivotX + radius - progressWidth, pivotY);
+        arrow.lineTo(pivotX + radius, pivotY + progressWidth);
+        arrow.lineTo(pivotX + radius + progressWidth, pivotY);
+        arrow.close();
+        canvas.drawPath(arrow, progressPaint);
     }
 
     /**
@@ -157,5 +177,12 @@ public class CircleProgressBarView extends View {
     public int dp2px(int dp) {
         return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp,
                 getResources().getDisplayMetrics());
+    }
+
+    /**
+     * 自动旋转动画
+     */
+    public void startAutoRotate(){
+//        ObjectAnimator animator = ObjectAnimator.ofFloat(this,this.progress)
     }
 }
